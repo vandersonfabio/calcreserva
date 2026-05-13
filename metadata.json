@@ -1,0 +1,6 @@
+{
+  "name": "PMRN Digital Command",
+  "description": "Calculadora de Reserva Militar para a Polícia Militar do Rio Grande do Norte, seguindo os critérios da Lei 13.954/19.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
