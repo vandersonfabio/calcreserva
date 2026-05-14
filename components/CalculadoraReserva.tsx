@@ -18,7 +18,7 @@ import {
   Menu,
   Gavel
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   format, 
   differenceInDays, 
@@ -369,7 +369,7 @@ export default function CalculadoraReserva() {
 
   return (
     <div className="flex flex-col min-h-screen font-sans">
-      <main className={`pt-8 pb-32 px-4 md:px-16 mx-auto w-full transition-all duration-700 ${showResults ? 'max-w-7xl' : 'max-w-3xl flex flex-col items-center text-center pt-32 md:pt-48'}`}>
+      <main className={`pt-12 pb-32 px-4 md:px-16 mx-auto w-full transition-all duration-700 ${showResults ? 'max-w-7xl' : 'max-w-3xl flex flex-col items-center text-center pt-24 md:pt-32'}`}>
         {/* Landing Hero */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -445,7 +445,7 @@ export default function CalculadoraReserva() {
                   ) : (
                     <>
                       <Calculator className="w-6 h-6" />
-                      Calcular
+                      Calcular Reserva
                     </>
                   )}
                 </button>
@@ -632,20 +632,15 @@ export default function CalculadoraReserva() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full py-8 mt-auto border-t border-white/5 flex flex-col items-center justify-center gap-4">
-        <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
-          <Shield className="w-4 h-4 text-[#adc7f8]" />
-          <span className="text-[10px] font-bold text-[#adc7f8] uppercase tracking-[0.2em]">6º Batalhão de Polícia Militar</span>
-        </div>
-        <p className="text-[10px] text-[#c4c6d0]/40 font-medium">Desenvolvido pelo Sgt PM Vanderson - 6º BPM</p>
-      </footer>
-
       {/* Decorative Overlays */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" 
-        style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }}
-      ></div>
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+
+      {/* Footer */}
+      <footer className="w-full py-6 px-4 md:px-16 border-t border-white/5 flex justify-center items-center mt-auto">
+        <p className="text-[#c4c6d0]/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+          Desenvolvido pelo Sgt PM Vanderson - 6º BPM
+        </p>
+      </footer>
     </div>
   );
 }
