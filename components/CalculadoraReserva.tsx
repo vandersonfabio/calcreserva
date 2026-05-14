@@ -18,7 +18,7 @@ import {
   Menu,
   Gavel
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   format, 
   differenceInDays, 
@@ -40,7 +40,7 @@ const TOLL_PERCENTAGE = 0.17;
 
 export default function CalculadoraReserva() {
   const [ingresDate, setIngresDate] = useState('2010-02-24');
-  const [prevDays, setPrevDays] = useState(1237);
+  const [prevDays, setPrevDays] = useState(0);
   const [results, setResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -369,25 +369,7 @@ export default function CalculadoraReserva() {
 
   return (
     <div className="flex flex-col min-h-screen font-sans">
-      {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-surface-dark/80 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-4 md:px-16 h-16">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#adc7f8] rounded-full flex items-center justify-center border border-white/20">
-            <Shield className="w-5 h-5 text-[#123059]" />
-          </div>
-          <span className="text-xl md:text-2xl font-bold tracking-tight text-[#adc7f8]">6º Batalhão de Polícia Militar</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="hover:bg-white/10 p-2 rounded-full transition-colors">
-            <History className="w-5 h-5 text-[#c4c6d0]" />
-          </button>
-          <button className="hover:bg-white/10 p-2 rounded-full transition-colors">
-            <HelpCircle className="w-5 h-5 text-[#c4c6d0]" />
-          </button>
-        </div>
-      </header>
-
-      <main className={`pt-24 pb-32 px-4 md:px-16 mx-auto w-full transition-all duration-700 ${showResults ? 'max-w-7xl' : 'max-w-3xl flex flex-col items-center text-center pt-32 md:pt-48'}`}>
+      <main className={`pt-8 pb-32 px-4 md:px-16 mx-auto w-full transition-all duration-700 ${showResults ? 'max-w-7xl' : 'max-w-3xl flex flex-col items-center text-center pt-32 md:pt-48'}`}>
         {/* Landing Hero */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -463,7 +445,7 @@ export default function CalculadoraReserva() {
                   ) : (
                     <>
                       <Calculator className="w-6 h-6" />
-                      Calcular Reserva
+                      Calcular
                     </>
                   )}
                 </button>
@@ -650,8 +632,20 @@ export default function CalculadoraReserva() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="w-full py-8 mt-auto border-t border-white/5 flex flex-col items-center justify-center gap-4">
+        <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+          <Shield className="w-4 h-4 text-[#adc7f8]" />
+          <span className="text-[10px] font-bold text-[#adc7f8] uppercase tracking-[0.2em]">6º Batalhão de Polícia Militar</span>
+        </div>
+        <p className="text-[10px] text-[#c4c6d0]/40 font-medium">Desenvolvido pelo Sgt PM Vanderson - 6º BPM</p>
+      </footer>
+
       {/* Decorative Overlays */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" 
+        style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }}
+      ></div>
     </div>
   );
 }

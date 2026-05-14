@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'PMRN Digital Command - Calculadora de Reserva',
+  title: 'CalcReserva Policial Militar',
   description: 'Calculadora de Reserva Militar para a PMRN seguindo a Lei 13.954/19',
 };
 
