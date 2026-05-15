@@ -9,7 +9,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'CalcReserva Policial Militar',
-  description: 'Calculadora de Reserva Militar para a PMRN seguindo a Lei 13.954/19',
+  description: 'Calculadora de Reserva Militar para a PMRN seguindo a Lei Complementar 692/2021',
 };
 
 export default function RootLayout({

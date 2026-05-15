@@ -32,8 +32,8 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Constants for Law 13.954/19
-const TRANSITION_DATE = new Date(2019, 11, 17); // Dec 17, 2019
+// Constants for LCE 692/2021 (PMRN)
+const TRANSITION_DATE = new Date(2021, 11, 31); // Dec 31, 2021
 const OLD_REQUIREMENT_YEARS = 30;
 const NEW_REQUIREMENT_YEARS = 35;
 const TOLL_PERCENTAGE = 0.17;
@@ -77,7 +77,7 @@ export default function CalculadoraReserva() {
       // A averbação NÃO altera:
       // - ingresso militar
       // - pedágio
-      // - tempo em 2019
+      // - tempo em 2021
       //
       // Ela apenas reduz a data final.
       // =========================================================
@@ -106,7 +106,7 @@ export default function CalculadoraReserva() {
       if (isTransition) {
 
         // -------------------------------------------------------
-        // TEMPO EXISTENTE EM 17/12/2019
+        // TEMPO EXISTENTE EM 31/12/2021
         // -------------------------------------------------------
         const serviceAtTransition = formatDurationSafe(
           start,
@@ -122,7 +122,7 @@ export default function CalculadoraReserva() {
         );
 
         // -------------------------------------------------------
-        // TEMPO FALTANTE EM 17/12/2019
+        // TEMPO FALTANTE EM 31/12/2021
         // -------------------------------------------------------
         const missingDays = Math.max(
           0,
@@ -381,7 +381,7 @@ export default function CalculadoraReserva() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#604403]/20 border border-secondary/20 text-secondary text-[10px] font-bold uppercase tracking-widest mb-6"
           >
             <Verified className="w-3 h-3" />
-            Simulador Lei 13.954/19
+            Simulador LCE 692/2021 (RN)
           </motion.div>
           <motion.h1 layout className={`${showResults ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-bold text-white mb-4 tracking-tight`}>
             Calculadora de Reserva Militar
@@ -462,10 +462,10 @@ export default function CalculadoraReserva() {
                 >
                   <h3 className="text-lg font-bold text-[#adc7f8] mb-2 flex items-center gap-2">
                     <Gavel className="w-5 h-5" />
-                    Critérios de Transição
+                    Transição LCE 692/21
                   </h3>
                   <p className="text-sm text-[#c4c6d0] leading-relaxed">
-                    Nossa ferramenta utiliza os parâmetros oficiais do Art. 26 da Lei 13.954/19, aplicando automaticamente o pedágio de 17% e o novo tempo mínimo de serviço de 35 anos.
+                    Nossa ferramenta utiliza os parâmetros da Lei Complementar Estadual 692/21, aplicando o pedágio de 17% sobre o tempo faltante em 31/12/2021.
                   </p>
                 </motion.section>
               )}
@@ -502,14 +502,14 @@ export default function CalculadoraReserva() {
                     <div className="flex items-center gap-2 text-[#c4c6d0]">
                       <Verified className="w-4 h-4 text-[#adc7f8]" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        {results.isTransition ? 'Regra de Transição Lei 13.954' : 'Regra Permanente Lei 13.954'}
+                        {results.isTransition ? 'Regra de Transição LCE 692/21' : 'Regra Permanente LCE 692/21'}
                       </span>
                     </div>
                     <div className="hidden md:block w-px h-4 bg-white/10" />
                     <div className="flex items-center gap-2 text-secondary">
                       <Info className="w-4 h-4" />
                       <span className="text-[10px] font-bold uppercase tracking-wider">
-                        {results.isTransition ? 'Base Legal: Art. 26' : 'Ingresso Pós-Vigência'}
+                        {results.isTransition ? 'Data Marco: 31/12/2021' : 'Ingresso Pós-Vigência'}
                       </span>
                     </div>
                   </div>
@@ -555,7 +555,7 @@ export default function CalculadoraReserva() {
                         <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-6 border-t-2 border-[#adc7f8]/30">
                           <div className="flex items-center gap-3 mb-3">
                             <History className="w-5 h-5 text-[#adc7f8]" />
-                            <span className="text-[10px] font-bold text-[#c4c6d0] uppercase tracking-wider">Tempo em 17/12/2019</span>
+                            <span className="text-[10px] font-bold text-[#c4c6d0] uppercase tracking-wider">Tempo em 31/12/2021</span>
                           </div>
                           <div className="text-2xl font-bold text-white tracking-tight">{results.serviceAtTransition}</div>
                           <p className="text-[10px] text-[#c4c6d0]/60 uppercase mt-4">Base oficial para transição</p>
@@ -577,7 +577,7 @@ export default function CalculadoraReserva() {
                           <span className="text-sm font-bold text-[#c4c6d0] uppercase tracking-widest">Regra Permanente</span>
                         </div>
                         <p className="text-white text-lg leading-relaxed">
-                          Como você ingressou após 17/12/2019, sua reserva requer 35 anos de serviço militar direto, sem regra de transição ou pedágio.
+                          Como você ingressou após 31/12/2021, sua reserva requer 35 anos de serviço militar direto, sem regra de transição ou pedágio.
                         </p>
                       </motion.div>
                     )}
@@ -611,12 +611,12 @@ export default function CalculadoraReserva() {
                     </div>
                     <div>
                       <div className="text-white font-bold text-xl">
-                        {results.isTransition ? 'Análise da Lei 13.954/2019' : 'Regramento Pós-Lei'}
+                        {results.isTransition ? 'LCE 692/2021 (RN)' : 'Regramento Pós-LCE'}
                       </div>
                       <div className="text-[#c4c6d0] text-sm leading-relaxed">
                         {results.isTransition 
-                          ? 'Cálculo baseado no Artigo 26 da Lei 13.954/19, aplicando pedágio sobre o tempo faltante.' 
-                          : 'Cálculo direto de 35 anos de serviço para ingressos após a vigência da nova lei.'}
+                          ? 'Cálculo baseado na Lei Complementar 692/21 (RN), aplicando pedágio de 17% sobre o tempo faltante em 31/12/2021.' 
+                          : 'Cálculo direto de 35 anos de serviço para ingressos após a vigência da lei estadual.'}
                       </div>
                     </div>
                   </div>
