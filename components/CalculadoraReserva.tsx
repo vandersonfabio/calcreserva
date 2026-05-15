@@ -1,41 +1,28 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Shield, 
   History, 
-  HelpCircle, 
   Calendar as CalendarIcon, 
-  ArrowRight, 
   Calculator, 
   Info, 
   Verified, 
-  BarChart3, 
   Hourglass, 
-  Clock, 
-  MoreVertical,
-  LayoutGrid,
-  Menu,
   Gavel
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   format, 
   differenceInDays, 
-  addDays, 
-  addYears, 
-  addMonths, 
-  parseISO, 
-  differenceInMonths,
-  differenceInYears,
-  intervalToDuration
+  addDays
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Constants for LCE 692/2021 (PMRN)
+// Constants for LCE 692/2021 (PMRN) - Strict Administrative Days
 const TRANSITION_DATE = new Date(2021, 11, 31); // Dec 31, 2021
-const OLD_REQUIREMENT_YEARS = 30;
-const NEW_REQUIREMENT_YEARS = 35;
+const DAYS_REQUIRED_30Y = 30 * 365; // 10.950 days
+const DAYS_REQUIRED_35Y = 35 * 365; // 12.775 days
 const TOLL_PERCENTAGE = 0.17;
 
 export default function CalculadoraReserva() {
@@ -45,14 +32,20 @@ export default function CalculadoraReserva() {
   const [showResults, setShowResults] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
-  const formatDuration = (start: Date, end: Date) => {
-    const duration = intervalToDuration({ start, end });
-    const parts = [];
-    if (duration.years) parts.push(`${duration.years} ano${duration.years > 1 ? 's' : ''}`);
-    if (duration.months) parts.push(`${duration.months} ${duration.months > 1 ? 'meses' : 'mês'}`);
-    if (duration.days) parts.push(`${duration.days} dia${duration.days > 1 ? 's' : ''}`);
+  // Helper function to format days strictly by administrative standard (365/30)
+  const formatAdminDuration = (totalDays: number) => {
+    if (totalDays <= 0) return '0 dias';
     
-    if (parts.length === 0) return '0 dias';
+    const years = Math.floor(totalDays / 365);
+    const remainingDaysAfterYears = totalDays % 365;
+    const months = Math.floor(remainingDaysAfterYears / 30);
+    const days = remainingDaysAfterYears % 30;
+
+    const parts = [];
+    if (years) parts.push(`${years} ano${years > 1 ? 's' : ''}`);
+    if (months) parts.push(`${months} ${months > 1 ? 'meses' : 'mês'}`);
+    if (days || parts.length === 0) parts.push(`${days} dia${days > 1 ? 's' : ''}`);
+    
     if (parts.length === 1) return parts[0];
     const last = parts.pop();
     return `${parts.join(', ')} e ${last}`;
@@ -62,304 +55,102 @@ export default function CalculadoraReserva() {
     setIsCalculating(true);
 
     setTimeout(() => {
-
-      // =========================================================
-      // NORMALIZAÇÃO DE DATA
-      // Evita bugs de timezone
-      // =========================================================
+      // Timezone safe date parsing
       const start = new Date(`${ingresDate}T12:00:00`);
-
       const today = new Date();
+      today.setHours(12, 0, 0, 0);
 
-      // =========================================================
-      // REGRA DE TRANSIÇÃO
-      // IMPORTANTE:
-      // A averbação NÃO altera:
-      // - ingresso militar
-      // - pedágio
-      // - tempo em 2021
-      //
-      // Ela apenas reduz a data final.
-      // =========================================================
       const isTransition = start <= TRANSITION_DATE;
 
-      // =========================================================
-      // FORMATADOR PADRONIZADO
-      // =========================================================
-      const formatDurationSafe = (startDate: Date, endDate: Date) => {
-
-        const duration = intervalToDuration({
-          start: startDate,
-          end: endDate
-        });
-
-        return (
-          `${duration.years || 0} ano${(duration.years || 0) !== 1 ? 's' : ''}, ` +
-          `${duration.months || 0} ${((duration.months || 0) !== 1) ? 'meses' : 'mês'} e ` +
-          `${duration.days || 0} dia${((duration.days || 0) !== 1 ? 's' : '')}`
-        );
-      };
-
-      // =========================================================
-      // REGRA DE TRANSIÇÃO
-      // =========================================================
       if (isTransition) {
+        // 1) Calculate exact days served until 31/12/2021
+        const daysServedAtTransition = Math.max(0, differenceInDays(TRANSITION_DATE, start));
+        const serviceAtTransition = formatAdminDuration(daysServedAtTransition);
 
-        // -------------------------------------------------------
-        // TEMPO EXISTENTE EM 31/12/2021
-        // -------------------------------------------------------
-        const serviceAtTransition = formatDurationSafe(
-          start,
-          TRANSITION_DATE
-        );
+        // 2) Calculate missing days to reach the 30-year mark (10.950 days)
+        const missingDays = Math.max(0, DAYS_REQUIRED_30Y - daysServedAtTransition);
+        const missingTo30 = formatAdminDuration(missingDays);
 
-        // -------------------------------------------------------
-        // DATA EM QUE COMPLETARIA 30 ANOS
-        // -------------------------------------------------------
-        const targetDate30y = addYears(
-          start,
-          OLD_REQUIREMENT_YEARS
-        );
+        // 3) Calculate 17% toll over the missing days
+        const tollDays = Math.round(missingDays * TOLL_PERCENTAGE);
+        const tollString = formatAdminDuration(tollDays);
 
-        // -------------------------------------------------------
-        // TEMPO FALTANTE EM 31/12/2021
-        // -------------------------------------------------------
-        const missingDays = Math.max(
-          0,
-          differenceInDays(
-            targetDate30y,
-            TRANSITION_DATE
-          )
-        );
+        // 4) Gross retirement date (Start + 30 years in days + toll days)
+        const grossProjectionDate = addDays(start, DAYS_REQUIRED_30Y + tollDays);
 
-        const missingTo30 = formatDurationSafe(
-          TRANSITION_DATE,
-          targetDate30y
-        );
+        // 5) Final date applying averbacao (subtracted at the end)
+        const projectionDate = addDays(grossProjectionDate, -prevDays);
 
-        // -------------------------------------------------------
-        // PEDÁGIO 17%
-        // -------------------------------------------------------
-        const tollDays = Math.round(
-          missingDays * TOLL_PERCENTAGE
-        );
-
-        // -------------------------------------------------------
-        // DATA BRUTA
-        // (30 anos + pedágio)
-        // -------------------------------------------------------
-        const grossProjectionDate = addDays(
-          targetDate30y,
-          tollDays
-        );
-
-        // -------------------------------------------------------
-        // DATA FINAL
-        // Averbação desconta apenas no final
-        // -------------------------------------------------------
-        const projectionDate = addDays(
-          grossProjectionDate,
-          -prevDays
-        );
-
-        // -------------------------------------------------------
-        // FORMATAÇÃO DO PEDÁGIO
-        // -------------------------------------------------------
-        const tollEndDate = addDays(
-          new Date(2000, 0, 1),
-          tollDays
-        );
-
-        const tollDuration = intervalToDuration({
-          start: new Date(2000, 0, 1),
-          end: tollEndDate
-        });
-
-        const tollString =
-          `${tollDuration.years || 0} anos, ` +
-          `${tollDuration.months || 0} meses e ` +
-          `${tollDuration.days || 0} dias`;
-
-        // -------------------------------------------------------
-        // TEMPO ATUAL MILITAR
-        // (SEM averbação)
-        // -------------------------------------------------------
-        const currentServiceString = formatDurationSafe(
-          start,
-          today
-        );
-
-        // -------------------------------------------------------
-        // TEMPO RESTANTE
-        // -------------------------------------------------------
-        const remainingString = formatDurationSafe(
-          today,
-          projectionDate
-        );
-
-        // -------------------------------------------------------
-        // PROGRESSO
-        // -------------------------------------------------------
-        const totalJourneyDays = differenceInDays(
-          grossProjectionDate,
-          start
-        );
-
-        const completedJourneyDays = differenceInDays(
-          today,
-          start
-        ) + prevDays;
-
+        // Progress Calculation
+        const totalJourneyDays = (DAYS_REQUIRED_30Y + tollDays);
+        const daysServedToday = differenceInDays(today, start);
+        const completedJourneyDays = daysServedToday + prevDays;
+        
         const progressPercent = Math.min(
           100,
-          Math.max(
-            0,
-            Math.floor(
-              (completedJourneyDays / totalJourneyDays) * 100
-            )
-          )
+          Math.max(0, Math.floor((completedJourneyDays / totalJourneyDays) * 100))
         );
 
-        // -------------------------------------------------------
-        // RESULTADOS
-        // -------------------------------------------------------
+        // Current service time string (including averbacao)
+        const currentServiceString = formatAdminDuration(daysServedToday + prevDays);
+        const remainingString = today >= projectionDate ? "Requisitos Cumpridos" : formatAdminDuration(differenceInDays(projectionDate, today));
+
         setResults({
           isTransition: true,
-
           projectionDate,
-
           grossProjectionDate,
-
           serviceAtTransition,
-
           missingTo30,
-
           tollString,
-
           currentServiceString,
-
           remainingString,
-
           totalRequirement: "30 anos + pedágio 17%",
-
           progressPercent,
-
           averbaçãoDias: prevDays
         });
 
       } else {
+        // PERMANENT RULE (35 years = 12.775 days)
+        const grossProjectionDate = addDays(start, DAYS_REQUIRED_35Y);
+        const projectionDate = addDays(grossProjectionDate, -prevDays);
 
-        // =======================================================
-        // REGRA PERMANENTE
-        // =======================================================
-
-        // -------------------------------------------------------
-        // DATA BRUTA
-        // -------------------------------------------------------
-        const grossProjectionDate = addYears(
-          start,
-          NEW_REQUIREMENT_YEARS
-        );
-
-        // -------------------------------------------------------
-        // DATA FINAL
-        // -------------------------------------------------------
-        const projectionDate = addDays(
-          grossProjectionDate,
-          -prevDays
-        );
-
-        // -------------------------------------------------------
-        // TEMPO ATUAL
-        // -------------------------------------------------------
-        const currentServiceString = formatDurationSafe(
-          start,
-          today
-        );
-
-        // -------------------------------------------------------
-        // TEMPO RESTANTE
-        // -------------------------------------------------------
-        const remainingString = formatDurationSafe(
-          today,
-          projectionDate
-        );
-
-        // -------------------------------------------------------
-        // PROGRESSO
-        // -------------------------------------------------------
-        const totalJourneyDays = differenceInDays(
-          grossProjectionDate,
-          start
-        );
-
-        const completedJourneyDays = differenceInDays(
-          today,
-          start
-        ) + prevDays;
-
+        const daysServedToday = differenceInDays(today, start);
+        const completedJourneyDays = daysServedToday + prevDays;
+        
         const progressPercent = Math.min(
           100,
-          Math.max(
-            0,
-            Math.floor(
-              (completedJourneyDays / totalJourneyDays) * 100
-            )
-          )
+          Math.max(0, Math.floor((completedJourneyDays / DAYS_REQUIRED_35Y) * 100))
         );
 
-        // -------------------------------------------------------
-        // RESULTADOS
-        // -------------------------------------------------------
+        const currentServiceString = formatAdminDuration(completedJourneyDays);
+        const remainingString = today >= projectionDate ? "Requisitos Cumpridos" : formatAdminDuration(differenceInDays(projectionDate, today));
+
         setResults({
           isTransition: false,
-
           projectionDate,
-
           grossProjectionDate,
-
           currentServiceString,
-
           remainingString,
-
           totalRequirement: "35 anos (Regra Permanente)",
-
           progressPercent,
-
           averbaçãoDias: prevDays
         });
       }
 
       setIsCalculating(false);
-
       setShowResults(true);
 
-      // =========================================================
-      // SCROLL MOBILE
-      // =========================================================
       if (window.innerWidth < 768) {
-
         setTimeout(() => {
-
-          window.scrollTo({
-            top: 400,
-            behavior: 'smooth'
-          });
-
+          window.scrollTo({ top: 400, behavior: 'smooth' });
         }, 100);
       }
-
     }, 800);
   };
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
   };
 
   const itemVariants = {
@@ -370,25 +161,23 @@ export default function CalculadoraReserva() {
   return (
     <div className="flex flex-col min-h-screen font-sans">
       <main className={`pt-12 pb-32 px-4 md:px-16 mx-auto w-full transition-all duration-700 ${showResults ? 'max-w-7xl' : 'max-w-3xl flex flex-col items-center text-center pt-24 md:pt-32'}`}>
+        
         {/* Landing Hero */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className={`mb-12 ${showResults ? '' : 'flex flex-col items-center'}`}
         >
-          <motion.div 
-            layout
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#604403]/20 border border-secondary/20 text-secondary text-[10px] font-bold uppercase tracking-widest mb-6"
-          >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#604403]/20 border border-secondary/20 text-secondary text-[10px] font-bold uppercase tracking-widest mb-6">
             <Verified className="w-3 h-3" />
             Simulador LCE 692/2021 (RN)
-          </motion.div>
-          <motion.h1 layout className={`${showResults ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-bold text-white mb-4 tracking-tight`}>
+          </div>
+          <h1 className={`${showResults ? 'text-4xl md:text-5xl' : 'text-5xl md:text-7xl'} font-bold text-white mb-4 tracking-tight`}>
             Calculadora de Reserva Militar
-          </motion.h1>
-          <motion.p layout className={`text-[#c4c6d0] text-lg max-w-2xl leading-relaxed ${showResults ? '' : 'text-center'}`}>
+          </h1>
+          <p className={`text-[#c4c6d0] text-lg max-w-2xl leading-relaxed ${showResults ? '' : 'text-center'}`}>
             Planeje sua transição com precisão. Insira seus dados abaixo para obter a projeção detalhada da sua reserva remunerada na Polícia Militar.
-          </motion.p>
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full">
@@ -434,11 +223,7 @@ export default function CalculadoraReserva() {
                   className="w-full h-16 bg-secondary text-[#412d00] text-xl font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#ffdea5] transition-all hover:shadow-[0_0_20px_rgba(233,193,118,0.3)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCalculating ? (
-                    <motion.div 
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="flex items-center gap-3"
-                    >
+                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-3">
                       <div className="w-6 h-6 border-4 border-[#412d00]/30 border-t-[#412d00] rounded-full animate-spin" />
                       Processando Dados...
                     </motion.div>
@@ -515,7 +300,7 @@ export default function CalculadoraReserva() {
                   </div>
                 </motion.div>
 
-                {/* Sub-grid with staggering */}
+                {/* Sub-grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   {/* Progress View */}
                   <motion.section variants={itemVariants} className="glass-panel rounded-2xl p-8 flex flex-col items-center gap-6">
@@ -530,7 +315,7 @@ export default function CalculadoraReserva() {
                     </div>
                     <div className="w-full space-y-4">
                       <div className="flex justify-between items-center text-sm font-bold text-[#c4c6d0]">
-                        <span>Serviço Militar</span>
+                        <span>Tempo de Serviço</span>
                         <span className="text-white text-[10px]">{results?.currentServiceString}</span>
                       </div>
                       <div className="w-full bg-[#323537] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 shadow-inner">
@@ -577,7 +362,7 @@ export default function CalculadoraReserva() {
                           <span className="text-sm font-bold text-[#c4c6d0] uppercase tracking-widest">Regra Permanente</span>
                         </div>
                         <p className="text-white text-lg leading-relaxed">
-                          Como você ingressou após 31/12/2021, sua reserva requer 35 anos de serviço militar direto, sem regra de transição ou pedágio.
+                          Como você ingressou após 31/12/2021, sua reserva requer 35 anos (12.775 dias) de serviço militar direto, sem regra de transição ou pedágio.
                         </p>
                       </motion.div>
                     )}
@@ -599,7 +384,7 @@ export default function CalculadoraReserva() {
                   )}
 
                   <motion.div variants={itemVariants} className={`glass-panel rounded-xl p-6 border-b border-white/5 ${!results.isTransition ? 'md:col-span-2' : ''}`}>
-                    <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Cálculo Atual Militar</span>
+                    <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Tempo Total Computado</span>
                     <div className="text-xl font-bold text-[#adc7f8] tracking-tight">{results.currentServiceString}</div>
                   </motion.div>
                 </div>
@@ -632,10 +417,8 @@ export default function CalculadoraReserva() {
         </div>
       </main>
 
-      {/* Decorative Overlays */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1] bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
 
-      {/* Footer */}
       <footer className="w-full py-6 px-4 md:px-16 border-t border-white/5 flex justify-center items-center mt-auto">
         <p className="text-[#c4c6d0]/40 text-[10px] font-bold uppercase tracking-[0.2em]">
           Desenvolvido pelo Sgt PM Vanderson - 6º BPM
