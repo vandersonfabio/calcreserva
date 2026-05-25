@@ -28,9 +28,38 @@ const TOLL_PERCENTAGE = 0.17;
 export default function CalculadoraReserva() {
   const [ingresDate, setIngresDate] = useState('2010-02-24');
   const [prevDays, setPrevDays] = useState(0);
+  const [prevInputMode, setPrevInputMode] = useState<'days' | 'yymmdd'>('days');
+  const [prevYears, setPrevYears] = useState(0);
+  const [prevMonths, setPrevMonths] = useState(0);
+  const [prevDaysPart, setPrevDaysPart] = useState(0);
+  const [unusedLeaves, setUnusedLeaves] = useState<number>(0);
   const [results, setResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+
+  const handleDaysChange = (days: number) => {
+    const safeDays = isNaN(days) || days < 0 ? 0 : days;
+    setPrevDays(safeDays);
+    const years = Math.floor(safeDays / 365);
+    const remainingDaysAfterYears = safeDays % 365;
+    const months = Math.floor(remainingDaysAfterYears / 30);
+    const remainingDays = remainingDaysAfterYears % 30;
+    setPrevYears(years);
+    setPrevMonths(months);
+    setPrevDaysPart(remainingDays);
+  };
+
+  const handleYymmddChange = (years: number, months: number, days: number) => {
+    const safeYears = isNaN(years) || years < 0 ? 0 : years;
+    const safeMonths = isNaN(months) || months < 0 ? 0 : months;
+    const safeDays = isNaN(days) || days < 0 ? 0 : days;
+    
+    setPrevYears(safeYears);
+    setPrevMonths(safeMonths);
+    setPrevDaysPart(safeDays);
+    const calculatedDays = (safeYears * 365) + (safeMonths * 30) + safeDays;
+    setPrevDays(calculatedDays);
+  };
 
   // Helper function to format days strictly by administrative standard (365/30)
   const formatAdminDuration = (totalDays: number) => {
@@ -61,6 +90,7 @@ export default function CalculadoraReserva() {
       today.setHours(12, 0, 0, 0);
 
       const isTransition = start <= TRANSITION_DATE;
+      const leavesDays = unusedLeaves * 365;
 
       if (isTransition) {
         // 1) Calculate exact days served until 31/12/2021
@@ -78,21 +108,21 @@ export default function CalculadoraReserva() {
         // 4) Gross retirement date (Start + 30 years in days + toll days)
         const grossProjectionDate = addDays(start, DAYS_REQUIRED_30Y + tollDays);
 
-        // 5) Final date applying averbacao (subtracted at the end)
-        const projectionDate = addDays(grossProjectionDate, -prevDays);
+        // 5) Final date applying averbacao and double-computed unused leaves (subtracted at the end)
+        const projectionDate = addDays(grossProjectionDate, -(prevDays + leavesDays));
 
         // Progress Calculation
         const totalJourneyDays = (DAYS_REQUIRED_30Y + tollDays);
         const daysServedToday = differenceInDays(today, start);
-        const completedJourneyDays = daysServedToday + prevDays;
+        const completedJourneyDays = daysServedToday + prevDays + leavesDays;
         
         const progressPercent = Math.min(
           100,
           Math.max(0, Math.floor((completedJourneyDays / totalJourneyDays) * 100))
         );
 
-        // Current service time string (including averbacao)
-        const currentServiceString = formatAdminDuration(daysServedToday + prevDays);
+        // Current service time string (including averbacao and leaves benefits)
+        const currentServiceString = formatAdminDuration(daysServedToday + prevDays + leavesDays);
         const remainingString = today >= projectionDate ? "Requisitos Cumpridos" : formatAdminDuration(differenceInDays(projectionDate, today));
 
         setResults({
@@ -106,16 +136,18 @@ export default function CalculadoraReserva() {
           remainingString,
           totalRequirement: "30 anos + pedágio 17%",
           progressPercent,
-          averbaçãoDias: prevDays
+          averbaçãoDias: prevDays,
+          unusedLeaves,
+          leavesDays
         });
 
       } else {
         // PERMANENT RULE (35 years = 12.775 days)
         const grossProjectionDate = addDays(start, DAYS_REQUIRED_35Y);
-        const projectionDate = addDays(grossProjectionDate, -prevDays);
+        const projectionDate = addDays(grossProjectionDate, -(prevDays + leavesDays));
 
         const daysServedToday = differenceInDays(today, start);
-        const completedJourneyDays = daysServedToday + prevDays;
+        const completedJourneyDays = daysServedToday + prevDays + leavesDays;
         
         const progressPercent = Math.min(
           100,
@@ -133,7 +165,9 @@ export default function CalculadoraReserva() {
           remainingString,
           totalRequirement: "35 anos (Regra Permanente)",
           progressPercent,
-          averbaçãoDias: prevDays
+          averbaçãoDias: prevDays,
+          unusedLeaves,
+          leavesDays
         });
       }
 
@@ -203,18 +237,112 @@ export default function CalculadoraReserva() {
                   />
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-secondary uppercase tracking-wider">Tempo Anterior (Averbado)</label>
-                  <div className="relative">
-                    <input 
-                      type="number" 
-                      value={prevDays}
-                      onChange={(e) => setPrevDays(Number(e.target.value))}
-                      placeholder="Total em dias"
-                      className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-4 focus:ring-2 focus:ring-secondary outline-none text-white transition-all pr-16 text-lg"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#c4c6d0] text-xs font-bold">DIAS</span>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-secondary uppercase tracking-wider">Tempo Anterior (Averbado)</label>
+                    <div className="flex bg-[#121416] p-0.5 rounded-lg border border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setPrevInputMode('days')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
+                          prevInputMode === 'days'
+                            ? 'bg-secondary text-[#412d00]'
+                            : 'text-[#c4c6d0] hover:text-white'
+                        }`}
+                      >
+                        Dias
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrevInputMode('yymmdd')}
+                        className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
+                          prevInputMode === 'yymmdd'
+                            ? 'bg-secondary text-[#412d00]'
+                            : 'text-[#c4c6d0] hover:text-white'
+                        }`}
+                      >
+                        A / M / D
+                      </button>
+                    </div>
                   </div>
+
+                  {prevInputMode === 'days' ? (
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        value={prevDays || ''}
+                        onChange={(e) => handleDaysChange(Number(e.target.value))}
+                        placeholder="Ex: 1237"
+                        className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-4 focus:ring-2 focus:ring-secondary outline-none text-white transition-all pr-16 text-lg"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[#c4c6d0] text-xs font-bold">DIAS</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="relative">
+                          <input 
+                            type="number" 
+                            value={prevYears || ''}
+                            onChange={(e) => handleYymmddChange(Number(e.target.value), prevMonths, prevDaysPart)}
+                            placeholder="Anos"
+                            className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-3 focus:ring-2 focus:ring-secondary outline-none text-white transition-all text-center text-lg pb-4"
+                          />
+                          <span className="absolute bottom-1 left-0 right-0 text-[8px] text-[#c4c6d0]/40 font-bold uppercase tracking-wider text-center pointer-events-none">Anos</span>
+                        </div>
+                        <div className="relative">
+                          <input 
+                            type="number" 
+                            value={prevMonths || ''}
+                            onChange={(e) => handleYymmddChange(prevYears, Number(e.target.value), prevDaysPart)}
+                            placeholder="Meses"
+                            className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-3 focus:ring-2 focus:ring-secondary outline-none text-white transition-all text-center text-lg pb-4"
+                          />
+                          <span className="absolute bottom-1 left-0 right-0 text-[8px] text-[#c4c6d0]/40 font-bold uppercase tracking-wider text-center pointer-events-none">Meses</span>
+                        </div>
+                        <div className="relative">
+                          <input 
+                            type="number" 
+                            value={prevDaysPart || ''}
+                            onChange={(e) => handleYymmddChange(prevYears, prevMonths, Number(e.target.value))}
+                            placeholder="Dias"
+                            className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-3 focus:ring-2 focus:ring-secondary outline-none text-white transition-all text-center text-lg pb-4"
+                          />
+                          <span className="absolute bottom-1 left-0 right-0 text-[8px] text-[#c4c6d0]/40 font-bold uppercase tracking-wider text-center pointer-events-none">Dias</span>
+                        </div>
+                      </div>
+                      {prevDays > 0 && (
+                        <p className="text-[10px] text-[#adc7f8]/80 font-semibold uppercase tracking-wider ml-1">
+                          → Equivalente a {prevDays} dias averbados
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-secondary uppercase tracking-wider block">Licenças Não Gozadas (máx. 2)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[0, 1, 2].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setUnusedLeaves(num)}
+                        className={`h-14 rounded-xl border font-bold text-lg transition-all ${
+                          unusedLeaves === num
+                            ? 'bg-secondary text-[#412d00] border-secondary'
+                            : 'bg-[#191c1e] border-[#43474e] text-white hover:border-[#adc7f8]/50'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-[#c4c6d0]/60 uppercase ml-1">
+                    {unusedLeaves === 0 && 'Nenhuma licença especial computada'}
+                    {unusedLeaves === 1 && 'Computa +1 ano de tempo de serviço (+365 dias)'}
+                    {unusedLeaves === 2 && 'Computa +2 anos de tempo de serviço (+730 dias)'}
+                  </p>
                 </div>
 
                 <button 
@@ -386,6 +514,14 @@ export default function CalculadoraReserva() {
                   <motion.div variants={itemVariants} className={`glass-panel rounded-xl p-6 border-b border-white/5 ${!results.isTransition ? 'md:col-span-2' : ''}`}>
                     <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Tempo Total Computado</span>
                     <div className="text-xl font-bold text-[#adc7f8] tracking-tight">{results.currentServiceString}</div>
+                    {(results.averbaçãoDias > 0 || results.unusedLeaves > 0) && (
+                      <p className="text-[10px] text-[#c4c6d0]/60 mt-2 font-medium">
+                        Inclui: {[
+                          results.averbaçãoDias > 0 ? `${results.averbaçãoDias} dias averbados` : null,
+                          results.unusedLeaves > 0 ? `${results.unusedLeaves} ${results.unusedLeaves === 1 ? 'licença' : 'licenças em dobro'}` : null
+                        ].filter(Boolean).join(' e ')}
+                      </p>
+                    )}
                   </motion.div>
                 </div>
 
