@@ -38,6 +38,8 @@ export default function CalculadoraReserva() {
   const [showResults, setShowResults] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  const isDateInvalid = !ingresDate || isNaN(Date.parse(`${ingresDate}T12:00:00`));
+
   const handleDaysChange = (days: number) => {
     const safeDays = isNaN(days) || days < 0 ? 0 : days;
     setPrevDays(safeDays);
@@ -87,6 +89,10 @@ export default function CalculadoraReserva() {
     setTimeout(() => {
       // Timezone safe date parsing
       const start = new Date(`${ingresDate}T12:00:00`);
+      if (isNaN(start.getTime())) {
+        setIsCalculating(false);
+        return;
+      }
       const today = new Date();
       today.setHours(12, 0, 0, 0);
 
@@ -234,8 +240,17 @@ export default function CalculadoraReserva() {
                     type="date" 
                     value={ingresDate}
                     onChange={(e) => setIngresDate(e.target.value)}
-                    className="w-full bg-[#191c1e] border border-[#43474e] rounded-xl h-14 px-4 focus:ring-2 focus:ring-secondary outline-none text-white transition-all text-lg"
+                    className={`w-full bg-[#191c1e] border rounded-xl h-14 px-4 focus:ring-2 outline-none text-white transition-all text-lg ${
+                      isDateInvalid 
+                        ? 'border-red-500/50 focus:ring-red-500' 
+                        : 'border-[#43474e] focus:ring-secondary'
+                    }`}
                   />
+                  {isDateInvalid && (
+                    <span className="text-[10px] text-red-400 font-semibold uppercase tracking-wider ml-1">
+                      Por favor, insira uma data de ingresso válida
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -348,7 +363,7 @@ export default function CalculadoraReserva() {
 
                 <button 
                   onClick={calculateProjection}
-                  disabled={isCalculating}
+                  disabled={isCalculating || isDateInvalid}
                   className="w-full h-16 bg-secondary text-[#412d00] text-xl font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#ffdea5] transition-all hover:shadow-[0_0_20px_rgba(233,193,118,0.3)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCalculating ? (
@@ -506,7 +521,10 @@ export default function CalculadoraReserva() {
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <h4 className="text-xs font-bold text-white uppercase tracking-wider">Ingresso Militar</h4>
                               <span className="text-[10px] font-mono font-bold bg-[#1d2022] px-2 py-0.5 rounded text-white border border-white/5">
-                                {format(new Date(`${ingresDate}T12:00:00`), "dd/MM/yyyy")}
+                                {(() => {
+                                  const d = new Date(`${ingresDate}T12:00:00`);
+                                  return !isNaN(d.getTime()) ? format(d, "dd/MM/yyyy") : "Data inválida";
+                                })()}
                               </span>
                             </div>
                             <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
