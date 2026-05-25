@@ -9,7 +9,8 @@ import {
   Info, 
   Verified, 
   Hourglass, 
-  Gavel
+  Gavel,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -428,125 +429,203 @@ export default function CalculadoraReserva() {
                   </div>
                 </motion.div>
 
-                {/* Sub-grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Progress View */}
-                  <motion.section variants={itemVariants} className="glass-panel rounded-2xl p-8 flex flex-col items-center gap-6">
-                    <h3 className="text-xs font-bold text-secondary uppercase tracking-widest text-center w-full">Progresso Geral</h3>
-                    <div className="relative flex items-center justify-center">
-                      <div className="progress-circle flex items-center justify-center" style={{ '--percent': results?.progressPercent || 0 } as any}>
-                        <div className="bg-[#1d2022] w-[104px] h-[104px] rounded-full flex flex-col items-center justify-center border border-white/5">
-                          <span className="text-3xl font-bold text-white">{results?.progressPercent}%</span>
-                          <span className="text-[10px] text-[#c4c6d0] uppercase font-bold">Cumpridos</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-full space-y-4">
-                      <div className="flex justify-between items-center text-sm font-bold text-[#c4c6d0]">
-                        <span>Tempo de Serviço</span>
-                        <span className="text-white text-[10px]">{results?.currentServiceString}</span>
-                      </div>
-                      <div className="w-full bg-[#323537] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 shadow-inner">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${results?.progressPercent}%` }}
-                          transition={{ duration: 1.5, ease: "easeOut" }}
-                          className="bg-gradient-to-r from-secondary to-[#ffdea5] h-full rounded-full shadow-[0_0_10px_rgba(233,193,118,0.4)]"
-                        />
-                      </div>
-                      <div className="flex justify-between items-center text-sm font-bold text-[#c4c6d0]">
-                        <span>Tempo Restante</span>
-                        <span className="text-secondary text-[10px]">{results?.remainingString}</span>
-                      </div>
-                    </div>
-                  </motion.section>
-
-                  {/* Service Breakdown */}
-                  <div className="grid grid-cols-1 gap-6">
-                    {results.isTransition ? (
-                      <>
-                        <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-6 border-t-2 border-[#adc7f8]/30">
-                          <div className="flex items-center gap-3 mb-3">
-                            <History className="w-5 h-5 text-[#adc7f8]" />
-                            <span className="text-[10px] font-bold text-[#c4c6d0] uppercase tracking-wider">Tempo em 31/12/2021</span>
-                          </div>
-                          <div className="text-2xl font-bold text-white tracking-tight">{results.serviceAtTransition}</div>
-                          <p className="text-[10px] text-[#c4c6d0]/60 uppercase mt-4">Base oficial para transição</p>
-                        </motion.div>
-
-                        <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-6 border-t-2 border-secondary/30">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Hourglass className="w-5 h-5 text-secondary" />
-                            <span className="text-[10px] font-bold text-[#c4c6d0] uppercase tracking-wider">Faltante para 30 anos</span>
-                          </div>
-                          <div className="text-2xl font-bold text-white tracking-tight">{results.missingTo30}</div>
-                          <p className="text-[10px] text-[#c4c6d0]/60 uppercase mt-4">Tempo remanescente na data marco</p>
-                        </motion.div>
-                      </>
-                    ) : (
-                      <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-8 border-l-4 border-secondary/50 flex flex-col justify-center h-full">
-                        <div className="flex items-center gap-3 mb-4">
-                          <Shield className="w-6 h-6 text-secondary" />
-                          <span className="text-sm font-bold text-[#c4c6d0] uppercase tracking-widest">Regra Permanente</span>
-                        </div>
-                        <p className="text-white text-lg leading-relaxed">
-                          Como você ingressou após 31/12/2021, sua reserva requer 35 anos (12.775 dias) de serviço militar direto, sem regra de transição ou pedágio.
-                        </p>
-                      </motion.div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Technical Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <motion.div variants={itemVariants} className="glass-panel rounded-xl p-6 border-b border-white/5">
-                    <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Requisito Total</span>
-                    <div className="text-xl font-bold text-white tracking-tight">{results.totalRequirement}</div>
-                  </motion.div>
+                {/* Sub-grid: Progress and Detailed Timeline Side-by-Side */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   
-                  {results.isTransition && (
-                    <motion.div variants={itemVariants} className="glass-panel rounded-xl p-6 border-b border-white/5">
-                      <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Pedágio (17%)</span>
-                      <div className="text-xl font-bold text-secondary tracking-tight">{results.tollString}</div>
+                  {/* Left Column: Progress Card (lg:col-span-5) */}
+                  <div className="lg:col-span-5 flex flex-col gap-6">
+                    <motion.section variants={itemVariants} className="glass-panel rounded-2xl p-8 flex flex-col items-center gap-6">
+                      <h3 className="text-xs font-bold text-secondary uppercase tracking-widest text-center w-full">Progresso Geral</h3>
+                      <div className="relative flex items-center justify-center">
+                        <div className="progress-circle flex items-center justify-center" style={{ '--percent': results?.progressPercent || 0 } as any}>
+                          <div className="bg-[#1d2022] w-[104px] h-[104px] rounded-full flex flex-col items-center justify-center border border-white/5">
+                            <span className="text-3xl font-bold text-white font-mono">{results?.progressPercent}%</span>
+                            <span className="text-[10px] text-[#c4c6d0] uppercase font-bold tracking-wider">Cumpridos</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full space-y-4">
+                        <div className="flex justify-between items-center text-sm font-bold text-[#c4c6d0]">
+                          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-[#adc7f8]" /> Efetuado</span>
+                          <span className="text-white text-[10px] font-mono">{results?.currentServiceString}</span>
+                        </div>
+                        <div className="w-full bg-[#323537] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 shadow-inner">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${results?.progressPercent}%` }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            className="bg-gradient-to-r from-secondary to-[#ffdea5] h-full rounded-full shadow-[0_0_10px_rgba(233,193,118,0.4)]"
+                          />
+                        </div>
+                        <div className="flex justify-between items-center text-sm font-bold text-[#c4c6d0]">
+                          <span className="flex items-center gap-1.5"><Hourglass className="w-3.5 h-3.5 text-secondary" /> Restante</span>
+                          <span className="text-secondary text-[10px] font-mono">{results?.remainingString}</span>
+                        </div>
+                      </div>
+                    </motion.section>
+
+                    {/* Legal Badge Card */}
+                    <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-6 border-l-4 border-secondary/50 flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-[#604403]/20 flex items-center justify-center border border-secondary/20 flex-shrink-0">
+                        <Gavel className="w-5 h-5 text-secondary" />
+                      </div>
+                      <div>
+                        <div className="text-white font-bold text-sm">
+                          {results.isTransition ? 'Modelo de Transição LCE 692/21' : 'Regramento Padrão'}
+                        </div>
+                        <p className="text-[11px] text-[#c4c6d0]/80 leading-relaxed mt-1">
+                          {results.isTransition 
+                            ? 'Aplica pedágio de 17% exclusivamente sobre o período faltante apurado em 31/12/2021.' 
+                            : 'Exige o cumprimento padrão de 35 anos diretos de efetivo serviço para militares sem direito à transição.'}
+                        </p>
+                      </div>
                     </motion.div>
-                  )}
+                  </div>
 
-                  <motion.div variants={itemVariants} className={`glass-panel rounded-xl p-6 border-b border-white/5 ${!results.isTransition ? 'md:col-span-2' : ''}`}>
-                    <span className="text-[10px] font-bold text-[#c4c6d0]/60 uppercase tracking-wider block mb-1">Tempo Total Computado</span>
-                    <div className="text-xl font-bold text-[#adc7f8] tracking-tight">{results.currentServiceString}</div>
-                    {(results.averbaçãoDias > 0 || results.unusedLeaves > 0) && (
-                      <p className="text-[10px] text-[#c4c6d0]/60 mt-2 font-medium">
-                        Inclui: {[
-                          results.averbaçãoDias > 0 ? `${results.averbaçãoDias} dias averbados` : null,
-                          results.unusedLeaves > 0 ? `${results.unusedLeaves} ${results.unusedLeaves === 1 ? 'licença' : 'licenças em dobro'}` : null
-                        ].filter(Boolean).join(' e ')}
-                      </p>
-                    )}
-                  </motion.div>
+                  {/* Right Column: Calculations and Milestones Timeline (lg:col-span-7) */}
+                  <div className="lg:col-span-7 flex flex-col gap-6">
+                    <motion.section variants={itemVariants} className="glass-panel rounded-2xl p-8 border border-white/5">
+                      <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+                        <span className="text-xs font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
+                          <History className="w-4 h-4" /> Linha do Tempo & Memória
+                        </span>
+                        <span className="text-[9px] font-mono bg-[#1d2022] border border-white/10 text-white px-2.5 py-1 rounded-full uppercase tracking-wider font-bold">
+                          {results.totalRequirement}
+                        </span>
+                      </div>
+
+                      {/* Timeline flow */}
+                      <div className="relative border-l border-white/10 pl-6 ml-3 space-y-8">
+                        
+                        {/* Milestone 1: Military entrance */}
+                        <div className="relative">
+                          {/* Indicator dot */}
+                          <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-secondary shadow-[0_0_8px_rgba(233,193,118,0.5)]" />
+                          
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Ingresso Militar</h4>
+                              <span className="text-[10px] font-mono font-bold bg-[#1d2022] px-2 py-0.5 rounded text-white border border-white/5">
+                                {format(new Date(`${ingresDate}T12:00:00`), "dd/MM/yyyy")}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
+                              Início do tempo de serviço administrativo na Corporação.
+                            </p>
+                          </div>
+                        </div>
+
+                        {results.isTransition ? (
+                          <>
+                            {/* Milestone 2: Service at Transition Date */}
+                            <div className="relative">
+                              <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-[#adc7f8] shadow-[0_0_8px_rgba(173,199,248,0.5)]" />
+                              
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Tempo em data limite (31/12/21)</h4>
+                                  <span className="text-[10px] font-mono font-bold bg-[#121416] px-2 py-0.5 rounded text-[#adc7f8] border border-white/5">
+                                    {results.serviceAtTransition}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
+                                  Base legal avaliada no momento da introdução da Lei Complementar Estadual.
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Milestone 3: Toll calculation */}
+                            <div className="relative">
+                              <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                              
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Pedágio Estimado (17%)</h4>
+                                  <span className="text-[10px] font-mono font-bold bg-[#1d2022] px-2 py-0.5 rounded text-amber-400 border border-white/5">
+                                    +{results.tollString}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
+                                  Acrescido por lei com base nos dias faltantes para cumprir o requisito anterior (faltavam {results.missingTo30}).
+                                </p>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          /* Milestone 2 for permanent rule */
+                          <div className="relative">
+                            <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                            
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Requisito Permanente</h4>
+                                <span className="text-[10px] font-mono font-bold bg-[#1d2022] px-2 py-0.5 rounded text-amber-400 border border-white/5">
+                                  35 anos (12.775 dias)
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
+                                Total legal para militares que ingressaram após 31/12/2021.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Milestone 4: Deductions (Averbacoes/Licencas) */}
+                        {(results.averbaçãoDias > 0 || results.unusedLeaves > 0) && (
+                          <div className="relative">
+                            <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                            
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Redutores (Benefícios)</h4>
+                                <span className="text-[10px] font-mono font-bold bg-emerald-950/25 border border-emerald-500/10 px-2 py-0.5 rounded text-emerald-400">
+                                  -{formatAdminDuration(results.averbaçãoDias + results.leavesDays)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed mb-3">
+                                Redução direta aplicada ao final da meta bruta por compensações concedidas:
+                              </p>
+                              
+                              <div className="flex flex-col gap-2">
+                                {results.averbaçãoDias > 0 && (
+                                  <div className="flex justify-between items-center text-[10px] font-bold bg-[#121416]/50 rounded-xl px-4 py-2 border border-white/5">
+                                    <span className="text-[#c4c6d0] uppercase tracking-wider">Tempo Averbedo Anterior</span>
+                                    <span className="text-secondary font-mono">+{results.averbaçãoDias} dias</span>
+                                  </div>
+                                )}
+                                {results.unusedLeaves > 0 && (
+                                  <div className="flex justify-between items-center text-[10px] font-bold bg-[#121416]/50 rounded-xl px-4 py-2 border border-white/5">
+                                    <span className="text-[#c4c6d0] uppercase tracking-wider">Licenças em Dobro ({results.unusedLeaves})</span>
+                                    <span className="text-secondary font-mono">+{results.leavesDays} dias (+{results.unusedLeaves} {results.unusedLeaves === 1 ? 'ano' : 'anos'})</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Milestone 5: Total final */}
+                        <div className="relative">
+                          <div className="absolute -left-[31px] top-1 w-2.5 h-2.5 rounded-full bg-[#121416] border-2 border-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                          
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Tempo Total Computado</h4>
+                              <span className="text-[10px] font-mono font-bold bg-[#1d2022] px-2 py-0.5 rounded text-cyan-400 border border-white/5">
+                                {results.currentServiceString}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#c4c6d0]/70 leading-relaxed">
+                              Jornada ativa real aferida de serviço somando os abonos computados.
+                            </p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </motion.section>
+                  </div>
+
                 </div>
-
-                <motion.div variants={itemVariants} className="glass-panel rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#604403]/20 flex items-center justify-center border border-secondary/20 rotate-3">
-                      <Gavel className="w-8 h-8 text-secondary" />
-                    </div>
-                    <div>
-                      <div className="text-white font-bold text-xl">
-                        {results.isTransition ? 'LCE 692/2021 (RN)' : 'Regramento Pós-LCE'}
-                      </div>
-                      <div className="text-[#c4c6d0] text-sm leading-relaxed">
-                        {results.isTransition 
-                          ? 'Cálculo baseado na Lei Complementar 692/21 (RN), aplicando pedágio de 17% sobre o tempo faltante em 31/12/2021.' 
-                          : 'Cálculo direto de 35 anos de serviço para ingressos após a vigência da lei estadual.'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-secondary/10 border border-secondary/20 px-8 py-3 rounded-full">
-                    <span className="text-secondary text-sm font-bold uppercase tracking-widest">
-                      {results.isTransition ? 'Transição' : 'Permanente'}
-                    </span>
-                  </div>
-                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
