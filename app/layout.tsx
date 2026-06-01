@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next'; // <-- Adicionado aqui
 
 const inter = Inter({
   subsets: ['latin'],
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} dark`} suppressHydrationWarning>
       <body className="font-sans antialiased">
         {children}
+        <Analytics /> {/* <-- Adicionado aqui */}
       </body>
     </html>
   );
