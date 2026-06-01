@@ -33,7 +33,7 @@ export default function CalculadoraReserva() {
   const [prevYears, setPrevYears] = useState(0);
   const [prevMonths, setPrevMonths] = useState(0);
   const [prevDaysPart, setPrevDaysPart] = useState(0);
-  const [prevSource, setPrevSource] = useState<'armed_forces' | 'private_public'>('armed_forces');
+  const [prevSource, setPrevSource] = useState<'armed_forces' | 'private_public'>('private_public');
   const [unusedLeaves, setUnusedLeaves] = useState<number>(0);
   const [results, setResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
