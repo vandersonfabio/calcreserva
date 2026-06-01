@@ -33,12 +33,15 @@ export default function CalculadoraReserva() {
   const [prevYears, setPrevYears] = useState(0);
   const [prevMonths, setPrevMonths] = useState(0);
   const [prevDaysPart, setPrevDaysPart] = useState(0);
+  const [prevSource, setPrevSource] = useState<'armed_forces' | 'private_public'>('armed_forces');
   const [unusedLeaves, setUnusedLeaves] = useState<number>(0);
   const [results, setResults] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
   const isDateInvalid = !ingresDate || isNaN(Date.parse(`${ingresDate}T12:00:00`));
+
+  const isDateInvalidFunc = !ingresDate || isNaN(Date.parse(`${ingresDate}T12:00:00`));
 
   const handleDaysChange = (days: number) => {
     const safeDays = isNaN(days) || days < 0 ? 0 : days;
@@ -99,6 +102,10 @@ export default function CalculadoraReserva() {
       const isTransition = start <= TRANSITION_DATE;
       const leavesDays = unusedLeaves * 365;
 
+      const MAX_PREV_DAYS_CAP = 5 * 365; // 5 years = 1825 days
+      const appliedPrevDays = prevSource === 'private_public' ? Math.min(prevDays, MAX_PREV_DAYS_CAP) : prevDays;
+      const wasContabilizedCapped = prevSource === 'private_public' && prevDays > MAX_PREV_DAYS_CAP;
+
       if (isTransition) {
         // 1) Calculate exact days served until 31/12/2021
         const daysServedAtTransition = Math.max(0, differenceInDays(TRANSITION_DATE, start));
@@ -116,12 +123,12 @@ export default function CalculadoraReserva() {
         const grossProjectionDate = addDays(start, DAYS_REQUIRED_30Y + tollDays);
 
         // 5) Final date applying averbacao and double-computed unused leaves (subtracted at the end)
-        const projectionDate = addDays(grossProjectionDate, -(prevDays + leavesDays));
+        const projectionDate = addDays(grossProjectionDate, -(appliedPrevDays + leavesDays));
 
         // Progress Calculation
         const totalJourneyDays = (DAYS_REQUIRED_30Y + tollDays);
         const daysServedToday = differenceInDays(today, start);
-        const completedJourneyDays = daysServedToday + prevDays + leavesDays;
+        const completedJourneyDays = daysServedToday + appliedPrevDays + leavesDays;
         
         const progressPercent = Math.min(
           100,
@@ -129,7 +136,7 @@ export default function CalculadoraReserva() {
         );
 
         // Current service time string (including averbacao and leaves benefits)
-        const currentServiceString = formatAdminDuration(daysServedToday + prevDays + leavesDays);
+        const currentServiceString = formatAdminDuration(daysServedToday + appliedPrevDays + leavesDays);
         const remainingString = today >= projectionDate ? "Requisitos Cumpridos" : formatAdminDuration(differenceInDays(projectionDate, today));
 
         setResults({
@@ -143,18 +150,22 @@ export default function CalculadoraReserva() {
           remainingString,
           totalRequirement: "30 anos + pedágio 17%",
           progressPercent,
-          averbaçãoDias: prevDays,
+          averbaçãoDias: appliedPrevDays,
+          rawPrevDays: prevDays,
+          prevSource,
           unusedLeaves,
-          leavesDays
+          leavesDays,
+          isCapped: wasContabilizedCapped,
+          cappedDaysDifference: prevDays - appliedPrevDays
         });
 
       } else {
         // PERMANENT RULE (35 years = 12.775 days)
         const grossProjectionDate = addDays(start, DAYS_REQUIRED_35Y);
-        const projectionDate = addDays(grossProjectionDate, -(prevDays + leavesDays));
+        const projectionDate = addDays(grossProjectionDate, -(appliedPrevDays + leavesDays));
 
         const daysServedToday = differenceInDays(today, start);
-        const completedJourneyDays = daysServedToday + prevDays + leavesDays;
+        const completedJourneyDays = daysServedToday + appliedPrevDays + leavesDays;
         
         const progressPercent = Math.min(
           100,
@@ -172,9 +183,13 @@ export default function CalculadoraReserva() {
           remainingString,
           totalRequirement: "35 anos (Regra Permanente)",
           progressPercent,
-          averbaçãoDias: prevDays,
+          averbaçãoDias: appliedPrevDays,
+          rawPrevDays: prevDays,
+          prevSource,
           unusedLeaves,
-          leavesDays
+          leavesDays,
+          isCapped: wasContabilizedCapped,
+          cappedDaysDifference: prevDays - appliedPrevDays
         });
       }
 
@@ -260,7 +275,7 @@ export default function CalculadoraReserva() {
                       <button
                         type="button"
                         onClick={() => setPrevInputMode('days')}
-                        className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
+                        className={`w-20 h-7 flex items-center justify-center rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
                           prevInputMode === 'days'
                             ? 'bg-secondary text-[#412d00]'
                             : 'text-[#c4c6d0] hover:text-white'
@@ -271,7 +286,7 @@ export default function CalculadoraReserva() {
                       <button
                         type="button"
                         onClick={() => setPrevInputMode('yymmdd')}
-                        className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
+                        className={`w-20 h-7 flex items-center justify-center rounded-md text-[10px] font-bold uppercase tracking-wider transition-all select-none ${
                           prevInputMode === 'yymmdd'
                             ? 'bg-secondary text-[#412d00]'
                             : 'text-[#c4c6d0] hover:text-white'
@@ -332,6 +347,41 @@ export default function CalculadoraReserva() {
                           → Equivalente a {prevDays} dias averbados
                         </p>
                       )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-secondary uppercase tracking-wider block">Origem do Tempo Anterior</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPrevSource('armed_forces')}
+                      className={`h-12 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        prevSource === 'armed_forces'
+                          ? 'bg-secondary text-[#412d00] border-secondary'
+                          : 'bg-[#191c1e] border-[#43474e] text-white hover:border-[#adc7f8]/50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">🎖️ Forças Armadas</span>
+                      <span className="text-[8px] opacity-75 font-semibold uppercase">Tempo Integral</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPrevSource('private_public')}
+                      className={`h-12 rounded-xl border text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        prevSource === 'private_public'
+                          ? 'bg-secondary text-[#412d00] border-secondary'
+                          : 'bg-[#191c1e] border-[#43474e] text-white hover:border-[#adc7f8]/50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">💼 CLT / Outro</span>
+                      <span className="text-[8px] opacity-75 font-semibold uppercase">Teto de 5 Anos</span>
+                    </button>
+                  </div>
+                  {prevSource === 'private_public' && prevDays > 1825 && (
+                    <div className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider ml-1 mt-1 leading-normal">
+                      ⚠️ Limitaremos o abatimento em 1.825 dias (5 anos), restando {prevDays - 1825} dias não computáveis por lei.
                     </div>
                   )}
                 </div>
@@ -606,9 +656,16 @@ export default function CalculadoraReserva() {
                               
                               <div className="flex flex-col gap-2">
                                 {results.averbaçãoDias > 0 && (
-                                  <div className="flex justify-between items-center text-[10px] font-bold bg-[#121416]/50 rounded-xl px-4 py-2 border border-white/5">
-                                    <span className="text-[#c4c6d0] uppercase tracking-wider">Tempo Averbedo Anterior</span>
-                                    <span className="text-secondary font-mono">+{results.averbaçãoDias} dias</span>
+                                  <div className="flex flex-col bg-[#121416]/50 rounded-xl p-4 border border-white/5 gap-2">
+                                    <div className="flex justify-between items-center text-[10px] font-bold">
+                                      <span className="text-[#c4c6d0] uppercase tracking-wider">Tempo Averbado Anterior</span>
+                                      <span className="text-secondary font-mono">+{results.averbaçãoDias} dias ({formatAdminDuration(results.averbaçãoDias)})</span>
+                                    </div>
+                                    {results.isCapped && (
+                                      <div className="text-[9px] text-amber-400 font-semibold uppercase tracking-wider border-t border-white/5 pt-2 mt-1 leading-normal">
+                                        ⚠️ TETO DE 5 ANOS (1.825 DIAS) APLICADO. Foram desconsiderados {results.cappedDaysDifference} dias excedentes por se tratar de tempo na Iniciativa Privada ou outro cargo público.
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 {results.unusedLeaves > 0 && (
