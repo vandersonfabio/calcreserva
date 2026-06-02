@@ -28,6 +28,7 @@ const TOLL_PERCENTAGE = 0.17;
 
 export default function CalculadoraReserva() {
   const [ingresDate, setIngresDate] = useState('2010-02-24');
+  const [ingresDateInput, setIngresDateInput] = useState('24/02/2010');
   const [prevDays, setPrevDays] = useState(0);
   const [prevInputMode, setPrevInputMode] = useState<'days' | 'yymmdd'>('days');
   const [prevYears, setPrevYears] = useState(0);
@@ -42,6 +43,42 @@ export default function CalculadoraReserva() {
   const isDateInvalid = !ingresDate || isNaN(Date.parse(`${ingresDate}T12:00:00`));
 
   const isDateInvalidFunc = !ingresDate || isNaN(Date.parse(`${ingresDate}T12:00:00`));
+
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ''); // strip non-digits
+    if (value.length > 8) {
+      value = value.substring(0, 8);
+    }
+    
+    let formatted = '';
+    if (value.length > 0) {
+      formatted = value.substring(0, 2);
+      if (value.length > 2) {
+        formatted += '/' + value.substring(2, 4);
+        if (value.length > 4) {
+          formatted += '/' + value.substring(4, 8);
+        }
+      }
+    }
+    
+    setIngresDateInput(formatted);
+    
+    if (value.length === 8) {
+      const day = parseInt(value.substring(0, 2), 10);
+      const month = parseInt(value.substring(2, 4), 10);
+      const year = parseInt(value.substring(4, 8), 10);
+      
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1800 && year <= 2100) {
+        const paddedDay = day.toString().padStart(2, '0');
+        const paddedMonth = month.toString().padStart(2, '0');
+        setIngresDate(`${year}-${paddedMonth}-${paddedDay}`);
+      } else {
+        setIngresDate('invalid');
+      }
+    } else {
+      setIngresDate('');
+    }
+  };
 
   const handleDaysChange = (days: number) => {
     const safeDays = isNaN(days) || days < 0 ? 0 : days;
@@ -252,10 +289,13 @@ export default function CalculadoraReserva() {
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-secondary uppercase tracking-wider">Data de Ingresso</label>
                   <input 
-                    type="date" 
-                    value={ingresDate}
-                    onChange={(e) => setIngresDate(e.target.value)}
-                    className={`w-full bg-[#191c1e] border rounded-xl h-14 px-4 focus:ring-2 outline-none text-white transition-all text-lg ${
+                    type="text" 
+                    inputMode="numeric"
+                    placeholder="DD/MM/AAAA"
+                    maxLength={10}
+                    value={ingresDateInput}
+                    onChange={handleDateInputChange}
+                    className={`w-full bg-[#191c1e] border rounded-xl h-14 px-4 focus:ring-2 outline-none text-white transition-all text-lg tracking-wider ${
                       isDateInvalid 
                         ? 'border-red-500/50 focus:ring-red-500' 
                         : 'border-[#43474e] focus:ring-secondary'
